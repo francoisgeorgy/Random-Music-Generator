@@ -356,11 +356,13 @@ public class Generator implements JMC
         double d = (double)1/notes.length;
 
         double noteLength = .25;
+        double maxNoteLength = .85d;
+        double minNoteLength = .05d;
 
         System.out.println(c + ", " + d);
 
         Random rand = new Random();
-        //double l = rand.nextGaussian()/6*noteLength;
+        double l = Math.abs(rand.nextGaussian()/6*noteLength);
         for (int a = 0; a < songLength; a++) {
 
             //<editor-fold desc="Determine pitch values">
@@ -397,7 +399,46 @@ public class Generator implements JMC
             }
             //</editor-fold>
 
-            double l = Math.abs(rand.nextGaussian()/3*noteLength + noteLength);
+            r = rand.nextGaussian()/3*noteLength;
+            if (r < 0)
+            {
+                if (l - r > minNoteLength)
+                {
+                    if (rand.nextDouble() > .5)
+                        l += r;
+                    else
+                        l -= r;
+                }
+                else
+                {
+                    l -= r;
+                }
+            }
+            if (r > 0)
+            {
+                if (l + r < maxNoteLength)
+                {
+                    if (rand.nextDouble() > .5)
+                        l += r;
+                    else
+                        l -= r;
+                }
+                else
+                {
+                    l -= r;
+                }
+            }
+
+            while (l <= minNoteLength)
+            {
+                l += minNoteLength;
+            }
+            while (l >= maxNoteLength)
+            {
+                l -= minNoteLength;
+            }
+
+            System.out.println(l + ", " + r);
 
             Note note = new Note(notes[i], l);
             phrase.addNote(note);/**/
