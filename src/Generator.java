@@ -7,6 +7,7 @@ import java.util.Random;
 
 public class Generator implements JMC {
     void Generatev1() {
+        //Generates a song using exactly 8 notes
         Score score = new Score();
         Part part = new Part("Piano", SYNTH_BASS);
         Phrase phrase = new Phrase();
@@ -237,6 +238,7 @@ public class Generator implements JMC {
     }
 
     void Generatev2() {
+        //Generates a song using any number of notes
         Score score = new Score();
         Part part = new Part("Synth1", SYNTH_BASS);
         Phrase phrase = new Phrase();
@@ -251,8 +253,6 @@ public class Generator implements JMC {
         double noteLength = .25;
         double maxNoteLength = .85d;
         double minNoteLength = .1d;
-
-        System.out.println(c + ", " + d);
 
         Random rand = new Random();
         double l = Math.abs(rand.nextGaussian() / 6 * noteLength);
@@ -330,10 +330,152 @@ public class Generator implements JMC {
         score.addPart(part);
 
         Write.midi(score);
+        Play.midi(score);
+    }
+
+    void Generatev3(int numberOfPhrases, int maxPhraseLength, int minPhraseLength, int songLength, double maxNoteLength, double minNoteLength, int[] notes, Part part, int maxRandTime)
+    {
+        //Generates multiple phrases,
+        //then adds them to a song
+        Score score = new Score();
+
+        Phrase[] phrases = new Phrase[numberOfPhrases];
+        int[] phraseStartNotes = new int[numberOfPhrases];
+        int[] phraseEndNotes = new int[numberOfPhrases];
+
+        int i = 0;
+        double c = (double) (notes.length - 1) / notes.length;
+        double d = (double) 1 / notes.length;
+
+        double initalNoteLength = .25;
+
+        Random rand = new Random();
+        double l = Math.abs(rand.nextGaussian() / 6 * initalNoteLength);
+
+        for (int p = 0; p < numberOfPhrases; p++)
+            phrases[p] = new Phrase();
+
+        for (int p = 0; p < numberOfPhrases; p++)
+        {
+            int phraseLength = rand.nextInt(maxPhraseLength-minPhraseLength+1)+minPhraseLength;
+            for (int n = 0; n < phraseLength; n++) {
+                //<editor-fold desc="Generate Phrase"
+                //<editor-fold desc="Determine note pitch">
+                double r = rand.nextGaussian() / 3;
+
+                for (int j = -notes.length + 1; j < -d; j++) {
+                    if (r > ((j / (double) (notes.length - 1)) * c - d) && r < (((j + 1) / (double) (notes.length - 1)) * c - d)) {
+                        if (i - j < 0) {
+                            i += j;
+                        } else {
+                            i -= j;
+                        }
+                        break;
+                    }
+                }
+
+                for (int j = 0; j < notes.length; j++) {
+                    if (r < (j / (double) (notes.length - 1)) * c + d) {
+                        if (i + j > notes.length - 1) {
+                            i -= j;
+                        } else {
+                            i += j;
+                        }
+                        break;
+                    }
+                }
+
+                while (i < 0) {
+                    i += notes.length - 1;
+                }
+
+                while (i > notes.length - 1) {
+                    i -= notes.length - 1;
+                }
+                //</editor-fold>
+
+                //<editor-fold desc="Determine note length">
+                r = rand.nextGaussian() / 3 * initalNoteLength;
+                if (r < 0) {
+                    if (l - r > minNoteLength) {
+                        if (rand.nextDouble() > .5)
+                            l += r;
+                        else
+                            l -= r;
+                    } else {
+                        l -= r;
+                    }
+                }
+                if (r > 0) {
+                    if (l + r < maxNoteLength) {
+                        if (rand.nextDouble() > .5)
+                            l += r;
+                        else
+                            l -= r;
+                    } else {
+                        l -= r;
+                    }
+                }
+
+                while (l <= minNoteLength) {
+                    l += minNoteLength;
+                }
+                while (l >= maxNoteLength) {
+                    l -= minNoteLength;
+                }
+                //</editor-fold>
+
+                if (n == 0)
+                    phraseStartNotes[p] = notes[i];
+                else if (n == phraseLength-1)
+                    phraseEndNotes[p] = notes[i];
+
+                Note note = new Note(notes[i], l);
+                phrases[p].addNote(note);
+                //</editor-fold>
+            }
+        }
+
+        int previousPart = rand.nextInt(numberOfPhrases);
+
+        for (int p = 0; p < songLength; p++)
+        {
+            part.add(phrases[previousPart]);
+            double rg = Math.abs(rand.nextGaussian()/3);
+            int r = rand.nextInt(numberOfPhrases);
+            int t = 0;
+            while (Math.abs(phraseEndNotes[previousPart] - phraseStartNotes[r])/Math.abs(notes[notes.length-1]/notes[0]) > rg )
+            {
+                if (t >= maxRandTime) {
+                    rg = Math.abs(rand.nextGaussian() / 3);
+                    t = 0;
+                }
+                System.out.println(t);
+                r = rand.nextInt(numberOfPhrases);
+                t++;
+            }
+            previousPart = r;
+        }
+
+        score.add(part);
+
+        Play.midi(score);
     }
 
     public static void main(String[] args) {
         Generator generator = new Generator();
-        generator.Generatev2();
+
+        int numberOfPhrases = 5;
+        int maxPhraseLength = 15;
+        int minPhraseLength = 5;
+        int songLength = 100;
+
+        double maxNoteLength = .85d;
+        double minNoteLength = .1d;
+
+        int[] notes = {C3, D3, E3, F3, G3, A4, B4, C4};
+        Part part = new Part("Synth1", SAX);
+
+        generator.Generatev3(numberOfPhrases, maxPhraseLength, minPhraseLength, songLength, maxNoteLength, minNoteLength, notes, part, 10);
     }
 }
